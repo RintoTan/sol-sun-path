@@ -76,6 +76,9 @@ h1 i{font-style:italic; color:var(--amber)}
 /* ---------- layout ---------- */
 .grid{display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr); gap:clamp(22px,3.4vw,54px); align-items:start}
 @media (max-width:960px){ .grid{grid-template-columns:1fr} }
+/* 宽屏：右侧控制面板比左侧天球图长，让天球图跟着视口停住，
+   这样在右边调滑块时能一直看着天空变化，不用来回滚 */
+@media (min-width:961px){ .grid > section.panel{position:sticky; top:22px} }
 
 .panel{
   border:1px solid var(--line); border-radius:2px;
@@ -87,7 +90,8 @@ h1 i{font-style:italic; color:var(--amber)}
   padding:13px 18px; border-bottom:1px solid var(--line);
   font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim);
 }
-.panel-title em{font-family:var(--serif); font-style:italic; font-size:15px; letter-spacing:0; text-transform:none; color:var(--ink); opacity:.75}
+.panel-title>span{min-width:0}
+.panel-title em{font-family:var(--serif); font-style:italic; font-size:15px; letter-spacing:0; text-transform:none; color:var(--ink); opacity:.75; flex:0 0 auto; white-space:nowrap}
 
 /* ---------- chart ---------- */
 .chart{padding:clamp(8px,2vw,20px)}
@@ -177,6 +181,60 @@ footer{margin-top:clamp(30px,5vw,64px); display:flex; justify-content:space-betw
 footer a{color:var(--dim); text-decoration:none; border-bottom:1px solid var(--line)}
 footer a:hover{color:var(--amber); border-color:var(--amber)}
 
+/* ---------- 直接操作（天球图 / 昼长曲线） ---------- */
+#dome,#strip{
+  touch-action:pan-y;                 /* 纵向留给页面滚动，横向交给我们改时刻/日期 */
+  cursor:grab; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent;
+}
+#dome.scrubbing,#strip.scrubbing{cursor:grabbing}
+.hintbar{display:flex; flex-wrap:wrap; gap:7px 18px; padding:0 18px 15px; font-size:11px; letter-spacing:.05em; color:var(--dim)}
+.hintbar span{display:inline-flex; align-items:center; gap:6px}
+.hintbar span::before{content:''; width:13px; height:13px; border:1px solid var(--line-hot); border-radius:50%}
+.hintbar span.k::before{border-radius:1px; border-style:dashed}
+
+/* ---------- 地点控件 ---------- */
+.sub{font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--dimmer); margin:13px 0 7px}
+.sub:first-child{margin-top:0}
+.freeform{display:grid; gap:11px; margin-top:13px; padding:13px 14px; border:1px solid var(--line); border-left:2px solid var(--amber); background:rgba(255,178,77,.05)}
+.freeform[hidden]{display:none}
+.ffrow{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px}
+.ffrow label{display:grid; gap:5px; font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--dimmer)}
+.ffrow input{width:100%; font-family:var(--mono); font-size:13px; color:var(--ink); background:rgba(6,9,19,.72); border:1px solid var(--line); border-radius:1px; padding:8px 9px}
+.ffrow input:focus{outline:none; border-color:var(--line-hot)}
+.ffnote{font-size:10.5px; line-height:1.7; color:var(--dim); border-left:1px solid var(--line); padding-left:10px}
+.ffnote[hidden]{display:none}
+.btn[disabled]{opacity:.45; cursor:default}
+
+/* ---------- 手机端底部操作条 ---------- */
+.dock{
+  display:none; position:fixed; z-index:30; left:0; right:0; bottom:0;
+  align-items:center; gap:12px;
+  padding:11px 15px calc(11px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(180deg, rgba(7,10,21,.78), rgba(5,8,17,.96));
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  border-top:1px solid var(--line);
+}
+.dock button{
+  flex:0 0 auto; width:44px; height:44px; border-radius:50%; line-height:1;
+  border:1px solid var(--line-hot); background:rgba(255,178,77,.1);
+  color:var(--ink); font-size:15px; cursor:pointer;
+}
+.dock button[aria-pressed=true]{background:var(--amber); color:#0a0e1c; border-color:var(--amber)}
+.dock input[type=range]{flex:1 1 auto; min-width:0}
+.dock .dtime{flex:0 0 auto; min-width:54px; text-align:right; font-size:14px; font-variant-numeric:tabular-nums}
+@media (max-width:960px){
+  .dock{display:flex}
+  .shell{padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
+}
+/* 触屏设备：放大滑块与按钮的触摸目标 */
+@media (pointer:coarse){
+  input[type=range]{height:30px}
+  input[type=range]::-webkit-slider-thumb{width:22px; height:22px; margin-top:-10.5px}
+  input[type=range]::-moz-range-thumb{width:22px; height:22px}
+  .chip{padding:9px 13px; font-size:12px}
+  .btn{padding:12px 14px}
+}
+
 /* ---------- entrance ---------- */
 @keyframes rise{from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none}}
 @keyframes draw{to{stroke-dashoffset:0}}
@@ -234,6 +292,7 @@ footer a:hover{color:var(--amber); border-color:var(--amber)}
             </filter>
             <clipPath id="domeClip"><circle cx="400" cy="400" r="386"/></clipPath>
           </defs>
+          <rect x="0" y="0" width="800" height="800" fill="transparent"/>
           <circle cx="400" cy="400" r="386" fill="url(#deepGrad)"/>
           <g id="g-grid"></g>
           <g id="g-fan"   clip-path="url(#domeClip)"></g>
@@ -248,6 +307,10 @@ footer a:hover{color:var(--amber); border-color:var(--amber)}
         <span><i class="swatch" style="background:linear-gradient(90deg,#ff7a2f,#5aa9e6)"></i>全年轨迹扇形（暖＝夏，冷＝冬）</span>
         <span><i class="swatch" style="background:rgba(255,230,189,.7)"></i>此刻太阳</span>
         <span><i class="swatch" style="background:repeating-linear-gradient(90deg,#8f9bc4 0 3px,transparent 3px 6px)"></i>至日轨迹</span>
+      </div>
+      <div class="hintbar">
+        <span>按住天空拖动 → 太阳跟着手指走，时刻实时变</span>
+        <span class="k">拖动下方昼长曲线 → 直接换日期</span>
       </div>
     </section>
 
@@ -277,7 +340,27 @@ footer a:hover{color:var(--amber); border-color:var(--amber)}
         <div class="ctrls">
           <div class="ctl">
             <label>观测地点 <b id="lb-city">上海</b></label>
+            <div class="btns" style="margin-bottom:2px">
+              <button class="btn" id="bt-geo">◎ 使用我的位置</button>
+              <button class="btn" id="bt-free" aria-pressed="false">✎ 自由选定</button>
+            </div>
+            <div class="ffnote" id="loc-note" hidden></div>
+            <div class="sub">城市</div>
             <div class="chips" id="city-chips"></div>
+            <div class="sub">特殊纬度（沿用当前经度与时区）</div>
+            <div class="chips" id="band-chips"></div>
+            <div class="freeform" id="freeform" hidden>
+              <div class="ffrow">
+                <label>纬度<input type="number" id="ff-lat" step="0.01" min="-89.5" max="89.5" inputmode="decimal"></label>
+                <label>经度<input type="number" id="ff-lon" step="0.01" min="-180" max="180" inputmode="decimal"></label>
+                <label>时区<input type="number" id="ff-tz" step="0.5" min="-12" max="14" inputmode="decimal"></label>
+              </div>
+              <div class="ffnote">时区按整小时填（如北京 8、纽约 −5、加德满都 5.75）。不确定就点“按经度估算”。</div>
+              <div class="btns">
+                <button class="btn" id="ff-apply">应用这个位置</button>
+                <button class="btn" id="ff-guess">按经度估算时区</button>
+              </div>
+            </div>
           </div>
           <div class="ctl">
             <label>纬度 <b id="lb-lat">31.23°N</b></label>
@@ -326,8 +409,10 @@ footer a:hover{color:var(--amber); border-color:var(--amber)}
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
+        <rect x="0" y="0" width="1000" height="230" fill="transparent"/>
         <g id="stripLayer"></g>
       </svg>
+      <div class="hintbar" style="padding:4px 18px 0"><span class="k">横向拖动曲线 → 直接换日期（全年 365 天）</span></div>
     </div>
   </section>
 
@@ -336,6 +421,14 @@ footer a:hover{color:var(--amber); border-color:var(--amber)}
     <span id="ft-check">—</span>
   </footer>
 </main>
+
+<!-- ============ 手机端底部操作条 ============ -->
+<div class="dock" id="dock">
+  <button id="dk-play" aria-pressed="false" aria-label="播放一天">▶</button>
+  <input type="range" id="dk-time" min="0" max="1439" step="1" value="720" aria-label="时刻">
+  <span class="dtime" id="dk-label">12:00</span>
+</div>
+
 <script>
 (function(){
 'use strict';
@@ -488,6 +581,21 @@ var CITIES=[
   {n:'雷克雅未克',      lat:64.1466, lon:-21.9426, tz:0},
   {n:'特罗姆瑟',        lat:69.6492, lon:18.9553,  tz:1},
   {n:'麦克默多（南极）', lat:-77.8419,lon:166.6863, tz:13}
+];
+
+/* 特殊纬度：由地轴倾角直接推出，不抄常数表。
+   极圈 = 90° − 倾角，回归线 = 倾角。选它们时沿用当前的经度和时区，
+   只换纬度 —— 相当于"沿同一条经线往北/往南走"。 */
+var TILT=23.44, ARCTIC=90-TILT;
+function bandLabel(name,lat){
+  return name+(lat===0 ? ' 0°' : ' '+Math.abs(lat).toFixed(1)+'°'+(lat>0?'N':'S'));
+}
+var BANDS=[
+  {n:bandLabel('北极圈',ARCTIC),   lat: ARCTIC},
+  {n:bandLabel('北回归线',TILT),   lat: TILT},
+  {n:bandLabel('赤道',0),          lat: 0},
+  {n:bandLabel('南回归线',-TILT),  lat: -TILT},
+  {n:bandLabel('南极圈',-ARCTIC),  lat: -ARCTIC}
 ];
 
 var state={
@@ -656,6 +764,7 @@ function buildGhost(){
 function drawToday(){
   var g=el('g-today'); g.innerHTML='';
   var pts=dayPoints(state.doy,state.lat,state.lon,state.tz,4);
+  state.todayPts=pts;                     /* 供触控命中用：拖天空时在这条轨迹上找最近点 */
   g.appendChild(mk('path',{
     d:toPath(pts.map(function(p){ return p.p; })),
     fill:'none', stroke:'rgba(255,178,77,.15)','stroke-width':1,'stroke-dasharray':'2 6'
@@ -945,49 +1054,105 @@ function render(){
 /* =====================================================================
    11 · 交互
    ===================================================================== */
-function setCity(c){
-  state.city=c.n; state.lat=c.lat; state.lon=c.lon; state.tz=c.tz;
-  el('in-lat').value=c.lat;
-  syncChips();
-  render();
+/* 改值 → 同步所有界面（右侧面板 + 手机端底部操作条）→ 重绘。
+   三条入口都走这里，避免出现两个滑块各说各话。 */
+function syncTimeUI(){
+  var v=Math.round(state.min);
+  el('in-time').value=v; el('dk-time').value=v;
+  el('lb-time').textContent=hm(state.min);
+  el('dk-label').textContent=hm(state.min);
+}
+function syncDoyUI(){
+  el('in-day').value=state.doy;
+  el('lb-day').textContent=mdText(state.doy);
+}
+function syncPlaceUI(){
+  el('in-lat').value=state.lat;
+  el('lb-lat').textContent=latLabel(state.lat);
+  el('lb-city').textContent=state.city;
+}
+function setTime(min){ state.min=mod(min,1440); syncTimeUI(); render(); }
+function setDoy(d){
+  state.doy=Math.max(1,Math.min(365,Math.round(d)));
+  syncDoyUI(); render();
+}
+function setPlace(o){
+  if(o.lat!=null) state.lat=Math.max(-89.5,Math.min(89.5,o.lat));
+  if(o.lon!=null) state.lon=o.lon;
+  if(o.tz!=null)  state.tz=Number(o.tz);
+  state.city=o.n||'自定义位置';
+  el('lb-city').style.color = o.custom ? 'var(--amber)' : '';
+  syncPlaceUI(); syncChips(); render();
 }
 function syncChips(){
-  var bs=el('city-chips').children;
-  for(var i=0;i<bs.length;i++){
-    var on=CITIES[i] && state.city===CITIES[i].n;
-    bs[i].setAttribute('aria-pressed', on?'true':'false');
-  }
+  [['city-chips',CITIES],['band-chips',BANDS]].forEach(function(g){
+    var bs=el(g[0]).children;
+    for(var i=0;i<bs.length;i++){
+      bs[i].setAttribute('aria-pressed', g[1][i] && state.city===g[1][i].n ? 'true':'false');
+    }
+  });
 }
-function buildCityChips(){
-  var box=el('city-chips');
-  CITIES.forEach(function(c){
+function buildChips(boxId,list){
+  var box=el(boxId);
+  list.forEach(function(c){
     var b=document.createElement('button');
     b.type='button'; b.className='chip'; b.textContent=c.n;
     b.setAttribute('aria-pressed','false');
-    b.addEventListener('click',function(){ setCity(c); });
+    b.addEventListener('click',function(){ closeFree(); setNote(''); setPlace(c); });
     box.appendChild(b);
   });
+}
+function setNote(t){
+  var n=el('loc-note');
+  if(!t){ n.hidden=true; n.textContent=''; return; }
+  n.hidden=false; n.textContent=t;
+}
+function lonLabel(lon){ return Math.abs(lon).toFixed(2)+'°'+(lon>=0?'E':'W'); }
+function tzLabel(tz){
+  var v=Number(tz);
+  return (v<0?'UTC−':'UTC+')+Math.abs(v);
+}
+function guessTz(lon){ return Math.max(-12,Math.min(14,Math.round(lon/15))); }
+function openFree(){
+  el('ff-lat').value=state.lat.toFixed(4);
+  el('ff-lon').value=state.lon.toFixed(4);
+  el('ff-tz').value=state.tz;
+  el('freeform').hidden=false;
+  el('bt-free').setAttribute('aria-pressed','true');
+}
+function closeFree(){
+  el('freeform').hidden=true;
+  el('bt-free').setAttribute('aria-pressed','false');
 }
 function buildDayChips(){
   var box=el('day-chips');
   [[79,'3/20 分点'],[172,'6/21 至点'],[266,'9/23 分点'],[355,'12/21 至点']].forEach(function(o){
     var b=document.createElement('button');
     b.type='button'; b.className='chip'; b.textContent=o[1];
-    b.addEventListener('click',function(){
-      state.doy=o[0]; el('in-day').value=o[0]; render();
-    });
+    b.addEventListener('click',function(){ setDoy(o[0]); });
     box.appendChild(b);
   });
 }
 
 var PLAY_MS_PER_DAY=26000;                   /* 播放速度：26 秒走完一整天 */
 var rafLast=0;
+function togglePlay(force){
+  var on = (force===undefined) ? !state.playing : !!force;
+  if(on===state.playing) return;
+  state.playing=on;
+  var bp=el('bt-play'), dp=el('dk-play');
+  bp.setAttribute('aria-pressed',on?'true':'false');
+  dp.setAttribute('aria-pressed',on?'true':'false');
+  bp.textContent=on?'❚❚ 暂停':'▶ 播放一天';
+  dp.textContent=on?'❚❚':'▶';
+  if(on){ rafLast=0; requestAnimationFrame(tick); }
+}
 function tick(ts){
   if(!state.playing) return;
   if(!rafLast) rafLast=ts;
   var dt=Math.min(120,ts-rafLast); rafLast=ts;
   state.min=mod(state.min+dt*(1440/PLAY_MS_PER_DAY),1440);
-  el('in-time').value=Math.round(state.min);
+  syncTimeUI();
   render();
   requestAnimationFrame(tick);
 }
@@ -1005,42 +1170,130 @@ function selfCheck(){
     +sg(dl)+Math.abs(dl)+'秒 · 正午高度角 '+sg(da)+Math.abs(da).toFixed(1)+'°';
 }
 
+/* ---------- 直接操作：在天球图里拖太阳 / 在昼长曲线上拖日期 ---------- */
+function svgPoint(node,ev){
+  var m=node.getScreenCTM();
+  if(!m) return null;
+  var p;
+  try{ p=new DOMPoint(ev.clientX,ev.clientY); }
+  catch(err){ p=node.createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY; }
+  try{ return p.matrixTransform(m.inverse()); }catch(err){ return null; }
+}
+function attachScrub(node,onPoint){
+  var active=null;
+  function start(ev){
+    if(typeof ev.button==='number' && ev.button!==0) return;
+    active=ev.pointerId;
+    try{ node.setPointerCapture(active); }catch(err){}
+    node.classList.add('scrubbing');
+    if(state.playing) togglePlay(false);      /* 手动拖动时先停掉动画 */
+    onPoint(svgPoint(node,ev));
+    ev.preventDefault();
+  }
+  function move(ev){
+    if(active===null || ev.pointerId!==active) return;
+    onPoint(svgPoint(node,ev));
+    ev.preventDefault();
+  }
+  function end(ev){
+    if(active===null || ev.pointerId!==active) return;
+    active=null;
+    node.classList.remove('scrubbing');
+    try{ node.releasePointerCapture(ev.pointerId); }catch(err){}
+  }
+  node.addEventListener('pointerdown',start);
+  node.addEventListener('pointermove',move);
+  node.addEventListener('pointerup',end);
+  node.addEventListener('pointercancel',end);
+}
+/* 天球图上：找当天 24 小时轨迹里离手指最近的那一点。
+   太阳只会沿着自己的轨迹走 —— 所以手指划过天空时，太阳是"贴"在弧线上跟过来的。 */
+function scrubDome(p){
+  if(!p || !state.todayPts || !state.todayPts.length) return;
+  var pts=state.todayPts, best=pts[0], bd=Infinity;
+  for(var i=0;i<pts.length;i++){
+    var q=pts[i].p, dx=q[0]-p.x, dy=q[1]-p.y, d=dx*dx+dy*dy;
+    if(d<bd){ bd=d; best=pts[i]; }
+  }
+  setTime(best.t);
+}
+function scrubStrip(p){
+  if(!p) return;
+  setDoy(1+(p.x-SX0)/(SX1-SX0)*364);
+}
+
+/* ---------- 定位 / 自由选定 ---------- */
+function initGeo(){
+  el('bt-geo').addEventListener('click',function(){
+    var b=this;
+    if(!navigator.geolocation){ setNote('这个浏览器不支持定位，用「自由选定」填经纬度吧。'); return; }
+    if(location.protocol==='file:'){
+      setNote('浏览器定位要求 https 或 localhost 打开页面（file:// 会被拦）。本地直接用「自由选定」填经纬度即可。');
+      return;
+    }
+    var old=b.textContent; b.disabled=true; b.textContent='◎ 定位中…';
+    navigator.geolocation.getCurrentPosition(function(pos){
+      b.disabled=false; b.textContent=old;
+      var c=pos.coords, tz=-new Date().getTimezoneOffset()/60;
+      closeFree();
+      setPlace({n:'我的位置', lat:c.latitude, lon:c.longitude, tz:tz, custom:true});
+      setNote('已定位：'+latLabel(state.lat)+' '+lonLabel(state.lon)
+             +'　时区按本机当前 UTC 偏移取 '+tzLabel(tz)
+             +'　精度约 '+(c.accuracy?Math.round(c.accuracy)+' 米':'未知')+'。要改就用「自由选定」。');
+    },function(err){
+      b.disabled=false; b.textContent=old;
+      setNote('定位没成功（'+(err&&err.message?err.message:'未知原因')+'）。可以直接用「自由选定」填经纬度。');
+    },{enableHighAccuracy:false,timeout:12000,maximumAge:600000});
+  });
+}
+function initFree(){
+  el('bt-free').addEventListener('click',function(){
+    if(el('freeform').hidden){ openFree(); setNote(''); } else { closeFree(); }
+  });
+  el('ff-guess').addEventListener('click',function(){
+    var lon=parseFloat(el('ff-lon').value);
+    if(!isFinite(lon)){ setNote('先填经度，再点估算。'); return; }
+    el('ff-tz').value=guessTz(lon);
+  });
+  el('ff-apply').addEventListener('click',function(){
+    var la=parseFloat(el('ff-lat').value), lo=parseFloat(el('ff-lon').value);
+    if(!isFinite(la)||la<-89.5||la>89.5){ setNote('纬度得是 −89.5 到 89.5 之间的数字。'); return; }
+    if(!isFinite(lo)||lo<-180||lo>180){ setNote('经度得是 −180 到 180 之间的数字。'); return; }
+    var tz=parseFloat(el('ff-tz').value);
+    if(!isFinite(tz)){ tz=guessTz(lo); el('ff-tz').value=tz; }
+    tz=Math.max(-12,Math.min(14,tz));
+    setPlace({n:'自定义位置', lat:la, lon:lo, tz:tz, custom:true});
+    setNote('已应用 '+latLabel(state.lat)+' '+lonLabel(state.lon)+' '+tzLabel(tz)
+           +'。太阳的方位和高度只取决于经纬度，钟表时刻才用时区。');
+  });
+}
+
 /* ---------- 启动 ---------- */
 buildGrid();
-buildCityChips();
+buildChips('city-chips',CITIES);
+buildChips('band-chips',BANDS);
 buildDayChips();
-el('in-lat').value=state.lat;
-el('in-day').value=state.doy;
-el('in-time').value=Math.round(state.min);
-syncChips();
+syncPlaceUI(); syncDoyUI(); syncTimeUI(); syncChips();
+initGeo(); initFree();
+attachScrub(el('dome'),scrubDome);
+attachScrub(el('strip'),scrubStrip);
 
 el('in-lat').addEventListener('input',function(){
   state.lat=parseFloat(this.value);
   state.city='自定义纬度';
-  el('lb-lat').textContent=latLabel(state.lat);
-  el('lb-city').textContent=state.city;
   el('lb-city').style.color='var(--amber)';
-  render();
+  syncPlaceUI(); syncChips(); render();
 });
-el('in-day').addEventListener('input',function(){
-  state.doy=parseInt(this.value,10); render();
-});
-el('in-time').addEventListener('input',function(){
-  state.min=parseFloat(this.value); render();
-});
-el('bt-play').addEventListener('click',function(){
-  state.playing=!state.playing;
-  this.setAttribute('aria-pressed',state.playing?'true':'false');
-  this.textContent=state.playing?'❚❚ 暂停':'▶ 播放一天';
-  if(state.playing){ rafLast=0; requestAnimationFrame(tick); }
-});
+el('in-day').addEventListener('input',function(){ setDoy(parseFloat(this.value)); });
+el('in-time').addEventListener('input',function(){ setTime(parseFloat(this.value)); });
+el('dk-time').addEventListener('input',function(){ setTime(parseFloat(this.value)); });
+el('bt-play').addEventListener('click',function(){ togglePlay(); });
+el('dk-play').addEventListener('click',function(){ togglePlay(); });
 el('bt-real').addEventListener('click',function(){
   var d=new Date();
   state.doy=mdToDoy(d.getMonth()+1,d.getDate());
   state.min=d.getHours()*60+d.getMinutes();
-  el('in-day').value=state.doy;
-  el('in-time').value=Math.round(state.min);
-  render();
+  syncDoyUI(); syncTimeUI(); render();
 });
 el('tg-fan').addEventListener('click',function(){
   state.showFan=!state.showFan;
