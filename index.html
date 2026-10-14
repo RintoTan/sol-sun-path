@@ -589,14 +589,21 @@ function yearScan(lat,lon,tz){
 }
 function mdText(n){ var md=doyToMD(n); return md.m+'月'+md.d+'日'; }
 
-/* 下一个「昼长改变方向」的日子。用 ±3 天平滑，避开逐日抖动与极昼/极夜的长平台 */
-function nextTurn(sc,doy){
+/* 下一个「白昼最长/最短」的极值日。平台期（极昼极夜）取平台的最后一天作为转折点 */
+function nextTurnDay(sc,doy){
   var N=365, arr=sc.arr;
   function L(n){ return arr[((n-1)%N+N)%N].len; }
-  var t0=Math.sign(L(doy+3)-L(doy));
-  for(var k=1;k<=200;k++){
-    var n=doy+k, t=Math.sign(L(n+3)-L(n));
-    if(t!==0 && t!==t0) return {days:k, doy:((n-1)%N+N)%N+1, grows:t>0};
+  function kind(n){
+    var p=L(n-1), c=L(n), x=L(n+1);
+    if(c<=p && c<=x && (c<p || c<x)) return 'min';
+    if(c>=p && c>=x && (c>p || c>x)) return 'max';
+    return null;
+  }
+  var k0=kind(doy);
+  if(k0) return {days:0, doy:doy, len:L(doy), kind:k0};
+  for(var k=1;k<=365;k++){
+    var n=((doy+k-1)%N)+1, kk=kind(n);
+    if(kk) return {days:k, doy:n, len:L(n), kind:kk};
   }
   return null;
 }
@@ -904,9 +911,13 @@ function buildInsight(info){
   }
   var sc=yearScan(state.lat,state.lon,state.tz);
   if(sc.maxLen-sc.minLen>1){
-    var nt=nextTurn(sc,state.doy);
-    if(nt) out.push('下一个转折点还有 <b>'+nt.days+' 天</b>：'+mdText(nt.doy)
-                   +' 起白昼开始<b>'+(nt.grows?'变长':'变短')+'</b>。');
+    var nt=nextTurnDay(sc,state.doy);
+    if(nt && nt.days===0){
+      out.push('今天正是全年白昼<b>'+(nt.kind==='max'?'最长':'最短')+'</b>的一天。');
+    }else if(nt){
+      out.push('下一个转折点还有 <b>'+nt.days+' 天</b>：'+mdText(nt.doy)+'，那天白昼'
+              +(nt.kind==='max'?'最长':'最短')+'，为 <b>'+dur(nt.len)+'</b>。');
+    }
   }else{
     out.push('在这个纬度上，全年白昼几乎不变——地轴倾角在这里不再拉开季节的差距。');
   }
