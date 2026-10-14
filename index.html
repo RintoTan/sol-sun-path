@@ -13,7 +13,8 @@
   --mono:'IBM Plex Mono',ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --ink:#f2f5ff;
   --dim:#94a0c4;
-  --dimmer:#5f6a8c;
+  --dimmer:#7b87aa;
+  --halo:0 1px 12px rgba(2,4,10,.85);
   --line:rgba(150,175,255,.14);
   --line-hot:rgba(255,178,77,.38);
   --amber:#ffb24d;
@@ -65,10 +66,11 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 h1{
   font-family:var(--serif); font-weight:400; margin:0;
   font-size:clamp(46px,8.5vw,104px); line-height:.86; letter-spacing:-.02em;
+  text-shadow:0 2px 28px rgba(2,4,10,.6);
 }
 h1 i{font-style:italic; color:var(--amber)}
-.tag{color:var(--dim); font-size:12px; letter-spacing:.16em; text-transform:uppercase; margin-top:10px}
-.top-right{text-align:right; font-size:11.5px; letter-spacing:.09em; color:var(--dimmer); line-height:1.9}
+.tag{color:var(--dim); font-size:12px; letter-spacing:.16em; text-transform:uppercase; margin-top:10px; text-shadow:var(--halo)}
+.top-right{text-align:right; font-size:11.5px; letter-spacing:.09em; color:var(--dimmer); line-height:1.9; text-shadow:var(--halo)}
 .top-right b{color:var(--amber); font-weight:500}
 
 /* ---------- layout ---------- */
@@ -77,7 +79,7 @@ h1 i{font-style:italic; color:var(--amber)}
 
 .panel{
   border:1px solid var(--line); border-radius:2px;
-  background:linear-gradient(180deg, rgba(12,17,33,.62), rgba(8,11,22,.34));
+  background:linear-gradient(180deg, rgba(10,15,29,.86), rgba(7,10,21,.74));
   backdrop-filter:blur(13px); -webkit-backdrop-filter:blur(13px);
 }
 .panel-title{
@@ -171,7 +173,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:2px solid #0a0
 .dl-eq{stroke:rgba(150,175,255,.22); stroke-width:1; stroke-dasharray:1 4}
 .dl-label{fill:var(--cream); font-family:var(--mono); font-size:10px; letter-spacing:.06em}
 
-footer{margin-top:clamp(30px,5vw,64px); display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; font-size:10.5px; letter-spacing:.08em; color:var(--dimmer)}
+footer{margin-top:clamp(30px,5vw,64px); display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; font-size:10.5px; letter-spacing:.08em; color:var(--dimmer); text-shadow:var(--halo)}
 footer a{color:var(--dim); text-decoration:none; border-bottom:1px solid var(--line)}
 footer a:hover{color:var(--amber); border-color:var(--amber)}
 
@@ -729,7 +731,7 @@ function paintSky(s){
    8 · 全年昼长曲线
    ===================================================================== */
 var SX0=64, SX1=966, SY0=30, SY1=182;
-var X0_SAFE=SX0+110, X1_SAFE=SX1-110;   /* 极值标注靠边时改用右/左对齐，避免压出图框 */
+
 function sx(n){ return SX0+(n-1)/364*(SX1-SX0); }
 function sy(min){ return SY1-(min/1440)*(SY1-SY0); }   /* 入参是「分钟」，全程统一 */
 var stripDataKey='', stripMarkKey='';
@@ -773,15 +775,11 @@ function buildStripStatic(){
   var g2=document.createElementNS(NS,'g');
   var flat = (sc.maxLen-sc.minLen)<1;
   var marks = flat ? [['max',sc.maxN,sc.maxLen]] : [['max',sc.maxN,sc.maxLen],['min',sc.minN,sc.minLen]];
+  /* 极值只在曲线上留一个空心圈。具体数值和日期由面板标题（dl-note）给出 ——
+     图内不再重复写一遍，这样在极昼/极夜那种曲线贴顶或贴底的场景里不会互相压字 */
   marks.forEach(function(o){
-    var px=sx(o[1]), py=sy(o[2]), up=(o[0]==='max');
-    g2.appendChild(mk('circle',{cx:px,cy:py,r:3,fill:'none',
-      stroke:'rgba(255,230,189,.7)','stroke-width':1}));
-    var t=mk('text',{x:px,y:up?py-12:py+20,
-      'text-anchor': px>X1_SAFE ? 'end' : (px<X0_SAFE ? 'start' : 'middle'),
-      class:'axis'});
-    t.textContent=mdText(o[1]).replace('月','/').replace('日','')+' · '+dur(o[2]);
-    g2.appendChild(t);
+    g2.appendChild(mk('circle',{cx:sx(o[1]),cy:sy(o[2]),r:3.5,fill:'none',
+      stroke:'rgba(255,230,189,.75)','stroke-width':1}));
   });
   svg.appendChild(g2);
 
